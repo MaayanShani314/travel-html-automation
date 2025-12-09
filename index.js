@@ -4,13 +4,13 @@ const fs = require("fs");
 const path = require("path");
 const nodemailer = require("nodemailer");
 
-// הגדרת חיבור ל-Airtable
+// חיבור ל-Airtable
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
   .base(process.env.AIRTABLE_BASE_ID);
 
 const TABLE_NAME = "Requests";
 
-// מייצר HTML מותאם מהרשומה
+// מייצר HTML מתוך הרשומה
 function generateHTML(record) {
   const { Email, Location, Notes } = record.fields;
 
@@ -26,22 +26,26 @@ function generateHTML(record) {
   `;
 }
 
-// שומר את קובץ ה-HTML על דיסק
+// שמירת HTML כקובץ
 function saveHTMLToFile(html, recordId) {
   const fileName = `request_${recordId}.html`;
   const filePath = path.join(__dirname, fileName);
 
   fs.writeFileSync(filePath, html);
+  console.log("HTML saved:", filePath);
+
   return filePath;
 }
 
-// שליחת אימייל
+// יצירת Transporter לשליחת מייל דרך Outlook
 async function sendEmail(to, htmlContent) {
   let transporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.office365.com",
+    port: 587,
+    secure: false,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: process.env.EMAIL_USER,  // מייל אאוטלוק
+      pass: process.env.EMAIL_PASS,  // סיסמה רגילה של אאוטלוק
     },
   });
 
@@ -55,16 +59,15 @@ async function sendEmail(to, htmlContent) {
   console.log("Email sent to:", to);
 }
 
-// עדכון הסטטוס ב-Airtable ל-Done
+// עדכון סטטוס הרשומה ל-Done
 async function markAsCompleted(recordId) {
   await base(TABLE_NAME).update(recordId, {
     Status: "Done",
   });
-
   console.log(`Record ${recordId} marked as Done`);
 }
 
-// הקוד הראשי
+// הרצת התהליך המלא
 async function run() {
   console.log("Starting automation...");
 
@@ -81,9 +84,7 @@ async function run() {
       console.log("Processing record:", record.fields);
 
       const html = generateHTML(record);
-
       const filePath = saveHTMLToFile(html, record.id);
-      console.log("HTML file saved:", filePath);
 
       await sendEmail(record.fields.Email, html);
 
@@ -92,7 +93,7 @@ async function run() {
       console.log("Finished record:", record.id);
     }
 
-    console.log("Done.");
+    console.log("Automation complete.");
 
   } catch (err) {
     console.error("Error:", err);
