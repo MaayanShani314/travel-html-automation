@@ -1,7 +1,7 @@
-name: Test Automation Run
+name: Travel Automation
 
 on:
-  workflow_dispatch:  # מאפשר להריץ ידנית
+  workflow_dispatch:
 
 jobs:
   run-script:
@@ -15,6 +15,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Install dependencies
+        run: npm install axios airtable nodemailer dotenv
 
       - name: Run the script
         run: node index.js
